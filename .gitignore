@@ -1,0 +1,4 @@
+prometheus/prometheus.yaml
+loki/local-config.yaml
+promtail/config.yml
+.env

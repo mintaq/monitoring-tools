@@ -1,0 +1,45 @@
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+
+positions:
+  filename: /tmp/positions.yaml
+
+clients:
+  - url: http://loki:3100/loki/api/v1/push
+
+scrape_configs:
+  - job_name: docker
+    docker_sd_configs:
+      - host: unix:///var/run/docker.sock
+        refresh_interval: 5s
+        filters:
+          - name: name
+            values: [tagfly-mongo, tagfly-redis, tagfly-kafka, tagfly-http-server, tagfly-queue-server, tagfly-web-pixel-events-consumer]
+    relabel_configs:
+      - source_labels: [__meta_docker_container_name]
+        regex: '/(.*)'
+        target_label: 'container'
+    pipeline_stages:
+      - static_labels:
+          host: "tagfly"
+      - json:
+          expressions:
+            level: level
+            timestamp: timestamp
+            tag: tag
+            userID: userID
+            shop: shop
+            msg: msg
+            data: data
+            error: error
+            identifier: identifier
+      - labels:
+            level: ""
+            tag: ""
+            userID: ""
+            shop: ""
+            msg: ""
+            data: ""
+            error: ""
+            identifier: ""

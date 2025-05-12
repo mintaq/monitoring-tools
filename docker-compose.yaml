@@ -1,0 +1,127 @@
+services:
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: monitoring-tools-prometheus
+    restart: unless-stopped
+    volumes:
+      - ./prometheus:/etc/prometheus/
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yaml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.size=3GB'
+      - '--storage.tsdb.retention.time=90d'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+    networks:
+      - monitoring_net
+    ulimits:
+      nofile:
+        soft: 4096
+        hard: 8192
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 128M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "1"
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: monitoring-tools-grafana
+    restart: unless-stopped
+    env_file:
+      - ./.env
+    ports:
+      - '3004:3000'
+    volumes:
+      - grafana_data:/var/lib/grafana
+    networks:
+      - monitoring_net
+    ulimits:
+      nofile:
+        soft: 4096
+        hard: 8192
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 256M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "1"
+
+  loki:
+    image: grafana/loki:latest
+    container_name: monitoring-tools-loki
+    restart: unless-stopped
+    command:
+      - '-validation.allow-structured-metadata=false'
+      - '-config.expand-env=true'
+      - '-config.file=/etc/loki/local-config.yaml'
+    volumes:
+      - ./loki:/etc/loki
+      - loki_data:/loki
+    networks:
+      - monitoring_net
+    ulimits:
+      nofile:
+        soft: 4096
+        hard: 8192
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "1"
+
+  promtail:
+    image: grafana/promtail:latest
+    container_name: monitoring-tools-promtail
+    restart: unless-stopped
+    volumes:
+      - promtail_position_data:/tmp
+      - ./promtail:/etc/promtail
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    command:
+      - '-config.file=/etc/promtail/config.yml'
+    depends_on:
+      - loki
+      - grafana
+    networks:
+      - monitoring_net
+    ulimits:
+      nofile:
+        soft: 4096
+        hard: 8192
+    deploy:
+      resources:
+        limits:
+          cpus: '0.1'
+          memory: 64M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "1"
+
+volumes:
+  grafana_data:
+  prometheus_data:
+  promtail_position_data:
+  loki_data:
+
+networks:
+  monitoring_net:
+    external: true
