@@ -15,14 +15,14 @@ scrape_configs:
         refresh_interval: 5s
         filters:
           - name: name
-            values: [tagfly-mongo, tagfly-redis, tagfly-kafka, tagfly-http-server, tagfly-queue-server, tagfly-web-pixel-events-consumer]
+            values: [rvt-*]
     relabel_configs:
       - source_labels: [__meta_docker_container_name]
         regex: '/(.*)'
         target_label: 'container'
     pipeline_stages:
       - static_labels:
-          host: "tagfly"
+          host: "rvt"
       - json:
           expressions:
             level: level
